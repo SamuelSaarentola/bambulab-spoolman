@@ -39,6 +39,14 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color.fromARGB(255, 46, 162, 185),
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      themeMode: ThemeMode.dark,
       home: const MyHomePage(title: 'Bambulab Spoolman Integration'),
     );
   }

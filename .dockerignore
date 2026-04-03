@@ -11,19 +11,11 @@ __pycache__
 *.code-workspace
 .idea
 
-# Flutter source tree — only the pre-built web output is needed at runtime.
-# Listing each item explicitly avoids Docker's parent-exclusion/negation quirks.
-Gui/bambulab_spoolman/lib
-Gui/bambulab_spoolman/web
-Gui/bambulab_spoolman/pubspec.yaml
-Gui/bambulab_spoolman/pubspec.lock
-Gui/bambulab_spoolman/analysis_options.yaml
-Gui/bambulab_spoolman/devtools_options.yaml
-Gui/bambulab_spoolman/.metadata
-Gui/bambulab_spoolman/.gitignore
-Gui/bambulab_spoolman/README.md
+# Flutter — source is needed by the flutter-build stage.
+# Exclude only local caches and any existing build output (built fresh in Docker).
 Gui/bambulab_spoolman/.dart_tool
 Gui/bambulab_spoolman/.pub-cache
+Gui/bambulab_spoolman/build
 
 # Runtime data files — bind-mounted from host at runtime, must not be in image.
 credentials.ini

@@ -126,10 +126,10 @@ class _FilamentsMapViewState extends State<FilamentsMapView> with SingleTickerPr
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.green.shade100,
+                        color: Colors.green.shade900,
                         borderRadius: BorderRadius.circular(4)
                       ),
-                      child: const Text("Slicer", style: TextStyle(fontSize: 10, color: Colors.green)),
+                      child: const Text("Slicer", style: TextStyle(fontSize: 10, color: Colors.greenAccent)),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -347,7 +347,7 @@ class _FilamentSelectionSheetState extends State<_FilamentSelectionSheet> {
 
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: isSuggested ? Colors.amber.shade100 : Colors.grey.shade200,
+        backgroundColor: isSuggested ? Colors.amber.shade900 : Colors.grey.shade800,
         child: Text(spool.vendor.isNotEmpty ? spool.vendor[0].toUpperCase() : "?"),
       ),
       title: Text(spool.name),

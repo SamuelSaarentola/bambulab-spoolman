@@ -1,3 +1,12 @@
+# Stage 1: Build Flutter web assets
+FROM ghcr.io/cirruslabs/flutter:stable AS flutter-build
+WORKDIR /flutter-app
+COPY Gui/bambulab_spoolman/pubspec.yaml Gui/bambulab_spoolman/pubspec.lock ./
+RUN flutter pub get
+COPY Gui/bambulab_spoolman/ ./
+RUN flutter build web --release
+
+# Stage 2: Python runtime
 FROM python:3.14-slim
 
 # WORKDIR must be /app — flutter_web_server.py resolves the web assets
@@ -14,6 +23,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the application tree (filtered by .dockerignore).
 COPY . .
+
+# Overlay the freshly built Flutter web assets from stage 1.
+COPY --from=flutter-build /flutter-app/build/web ./Gui/bambulab_spoolman/build/web
 
 # Inbound ports. Port 8883 (MQTT to printer) is outbound-only, not listed.
 EXPOSE 2323

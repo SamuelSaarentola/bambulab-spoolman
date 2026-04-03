@@ -13,3 +13,4 @@ log_errors.txt
 credentials.ini
 GUI/bambulab_spoolman/lib/bambulab_spoolman_flutter.code-workspace
 app.log
+config/

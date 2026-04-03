@@ -19,13 +19,14 @@ class BambuPrinter:
   def __init__(self):
     self.current_state = State.UNKWON
     self.new_state = State.UNKWON
-    self.current_gcode = None 
+    self.current_gcode = None
     self.current_filament = None
     self.current_percent = 0
     self.print_task = PrintTask()
     self.first_time = True
     self.complete_task = False
     self.externalFilamentID = 0
+    self.ams_slot_filament_ids: dict[int, str] = {}  # slot_index (1-based) -> filament_id
 
   def ProccessMQTTMsg(self, msg):
     data = msg.payload.decode()
@@ -49,7 +50,23 @@ class BambuPrinter:
     
     
   def AMSFilamentParser(self, msg):
-    pass
+    """Parse AMS tray data from MQTT to capture slot_index -> filament_id mapping.
+    Slot index is 1-based and matches the filament id in Bambu Studio's slice_info.config:
+    AMS unit 0 tray 0 = slot 1, AMS unit 0 tray 3 = slot 4, AMS unit 1 tray 0 = slot 5, etc.
+    """
+    if "ams" not in msg:
+      return
+    for ams_unit in msg["ams"]:
+      try:
+        ams_id = int(ams_unit.get("id", 0))
+        for tray in ams_unit.get("tray", []):
+          tray_id = int(tray.get("id", 0))
+          filament_id = tray.get("tray_info_idx", "")
+          if filament_id:
+            slot_index = ams_id * 4 + tray_id + 1
+            self.ams_slot_filament_ids[slot_index] = filament_id
+      except Exception as e:
+        logger.log_error(f"AMSFilamentParser error: {e}")
 
   def ExternalFilamentParser(self, msg):
     if "tray_info_idx" in msg:
@@ -129,9 +146,9 @@ class BambuPrinter:
         self.print_task.end_time = datetime.now().strftime("%H:%M:%S-%d-%m-%Y")
         logger.log_info(f"Task complete {self.complete_task}")
         if self.complete_task == True:
-          self.print_task.ReportAndSaveTask()
+          self.print_task.ReportAndSaveTask(self.ams_slot_filament_ids)
         self.complete_task = False
-        
+
       # Print taks is received and start preparing
       elif(self.new_state == State.PREPARING):
         logger.log_info("Printer is preparing.")
@@ -158,7 +175,7 @@ class BambuPrinter:
         self.print_task.status = "Failed"
         self.print_task.end_time = datetime.now().strftime("%H:%M:%S-%d-%m-%Y")
         if self.complete_task == True:
-          self.print_task.ReportAndSaveTask()
+          self.print_task.ReportAndSaveTask(self.ams_slot_filament_ids)
         self.complete_task = False
         self.new_state = State.IDLE
         

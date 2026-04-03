@@ -2,6 +2,7 @@ import json
 import os
 import Spoolman.spoolman_filament as spoolman_filament
 from helper_logs import logger
+from SlicerIntegration.slicer_watcher import get_pending_slot_weights, clear_pending_slot_weights
 
 class PrintTask:
   def __init__(self):
@@ -51,29 +52,59 @@ class PrintTask:
       self.status = None
       self.image_cover_url = None
       
-  def ReportAndSaveTask(self):
-      """Save the task to a task.txt file as a JSON object."""
+  def ReportAndSaveTask(self, ams_slot_filament_ids: dict = {}):
+      """Save the task to a task.txt file as a JSON object.
+
+      Priority:
+      1. Slicer data (3mf watcher) + AMS slot mapping from MQTT → per-colour tracking
+      2. Bambu Cloud teoric_filaments → material-level tracking (fallback)
+      """
       file_name = "task.txt"
       if self.percent_complete != 0:
-        if self.teoric_filaments:
-            self.reported_filament = []  # Inicializar si es None
-            if self.percent_complete == 100:
-                logger.log_info("Complete Taks")
-                multiplier = 1
-            else:
-                logger.log_error("No complete task")
-                try:
-                    multiplier = (self.percent_complete-self.init_percent)/(100-self.init_percent)
-                except:
-                    multiplier = 1
-                    logger.log_error("Error calculating multiplier")
-                logger.log_info(f"Using multiplier: {multiplier}")
-            
-            for filament in self.teoric_filaments:
-                filament["weight"] = multiplier * filament["weight"]
-                saved_filament = spoolman_filament.RegisterFilament(filament["filamentId"], filament["weight"])
-                if saved_filament == True:
-                    self.reported_filament.append(filament)
+          if self.percent_complete == 100:
+              logger.log_info("Complete task")
+              multiplier = 1.0
+          else:
+              logger.log_error("Incomplete task")
+              try:
+                  multiplier = (self.percent_complete - self.init_percent) / (100 - self.init_percent)
+              except Exception:
+                  multiplier = 1.0
+                  logger.log_error("Error calculating multiplier, defaulting to 1")
+              logger.log_info(f"Using multiplier: {multiplier}")
+
+          slicer_slot_weights = get_pending_slot_weights()
+
+          if slicer_slot_weights and ams_slot_filament_ids:
+              # Per-colour tracking from 3mf + AMS MQTT slot mapping
+              logger.log_info("Using slicer 3mf data for per-colour filament reporting")
+              self.reported_filament = []
+              for slot_index, planned_weight in slicer_slot_weights.items():
+                  filament_id = ams_slot_filament_ids.get(slot_index)
+                  if not filament_id:
+                      logger.log_error(f"No filament_id for slot {slot_index}, skipping")
+                      continue
+                  actual_weight = multiplier * planned_weight
+                  saved = spoolman_filament.RegisterFilament(filament_id, actual_weight)
+                  if saved:
+                      self.reported_filament.append({
+                          "slot": slot_index,
+                          "filamentId": filament_id,
+                          "weight": actual_weight
+                      })
+              clear_pending_slot_weights()
+
+          elif self.teoric_filaments:
+              # Fallback: cloud-based material-level tracking
+              logger.log_info("Using Bambu Cloud data for filament reporting (no slicer data)")
+              self.reported_filament = []
+              for filament in self.teoric_filaments:
+                  filament["weight"] = multiplier * filament["weight"]
+                  saved_filament = spoolman_filament.RegisterFilament(filament["filamentId"], filament["weight"])
+                  if saved_filament:
+                      self.reported_filament.append(filament)
+          else:
+              logger.log_error("No filament data available (no slicer 3mf and no cloud data)")
       
       # Load existing tasks if the file exists
       if os.path.exists(file_name):

@@ -13,6 +13,7 @@ import Local_MQTT.local_mqtt as MQTT
 import BambuPrinter as BambuPrinter
 import Gui.WebServer.flutter_web_server as flutter_web_server
 import Gui.WebServer.websockets_service as websocket_service
+import SlicerIntegration.slicer_watcher as slicer_watcher
 
 # Start GUI and websockets connection
 logger.log_info("Starting GUI")
@@ -24,6 +25,9 @@ logger.log_info("Autodiscover started")
 logger.log_info("Starting WebSockets")
 websocket_service.start_websocket_server()
 logger.log_info("Websocket started")
+
+# Start slicer 3mf folder watcher
+slicer_watcher.start_thread()
 
 # Start and connect to the local MQTT broker
 MQTT.StartMQTT()
